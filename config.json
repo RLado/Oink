@@ -1,0 +1,9 @@
+{
+    "secretapikey": "<your secret api key here>",
+    "apikey": "<your api key here>",
+    "domain": "<your domain here>",
+    "subdomain": "<your subdomain here>",
+    "ttl": 600,
+    "priority": 0,
+    "interval": 300
+}

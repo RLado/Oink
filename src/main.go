@@ -16,7 +16,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -65,7 +65,7 @@ func get_ip(config Config) (IP, error) {
 	defer resp.Body.Close()
 
 	// Parse API response
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return ip, fmt.Errorf("error reading API response: %s", err)
 	}
@@ -126,7 +126,7 @@ func update_dns(config Config, ip IP) (bool, error) {
 	defer resp.Body.Close()
 
 	// Parse API response
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return false, fmt.Errorf("error reading API response: %s", err)
 	}
@@ -204,7 +204,7 @@ func update_dns(config Config, ip IP) (bool, error) {
 	defer resp.Body.Close()
 
 	// Parse API response
-	body, err = ioutil.ReadAll(resp.Body)
+	body, err = io.ReadAll(resp.Body)
 	if err != nil {
 		return false, fmt.Errorf("error reading API response: %s", err)
 	}
@@ -258,7 +258,7 @@ func create_record(config Config, ip IP) (bool, error) {
 	defer resp.Body.Close()
 
 	// Parse API response
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return false, fmt.Errorf("error reading API response: %s", err)
 	}

@@ -3,7 +3,7 @@ Description=A lightweight DDNS client for Porkbun
 After=multi-user.target
 
 [Service]
-ExecStart=/usr/local/bin/oink
+ExecStart=/usr/bin/oink
 Type=simple
 Restart=on-failure
 

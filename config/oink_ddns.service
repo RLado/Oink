@@ -1,0 +1,11 @@
+[Unit]
+Description=A lightweight DDNS client for Porkbun
+After=multi-user.target
+
+[Service]
+ExecStart=/usr/local/bin/oink
+Type=simple
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

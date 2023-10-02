@@ -1,12 +1,26 @@
 # Oink!
-## A lightweight DDNS client for [porkbun](https://porkbun.com)
+## A lightweight DDNS client for [Porkbun](https://porkbun.com)
 
 > NOTE: **Oink!** is in BETA. If you encounter any bugs please report them at https://github.com/RLado/Oink!
 
 **Oink!** is an unofficial DDNS client for porkbun.com built in Go. **Oink!** only depends on Go's standard library.
 
 ### How to install
-You can install **Oink!** using the official snap package by ... [To Do]
+You can install **Oink!** using an [official package](https://github.com/RLado/Oink/releases) or by using *make*.
+
+#### On distributions supporting .deb files (Debian, Ubuntu, ...)
+```bash
+dpkg -i <oink_pkg>.deb
+```
+
+#### Or you can build from source and install using *make*
+> Requires *make* and *go*
+```bash
+make
+sudo make install
+```
+
+You may **uninstall** using `sudo make uninstall` to remove **all** configuration files and binaries
 
 ### How to setup
 The setup process is simple:

@@ -1,5 +1,5 @@
 [Unit]
-Description=A lightweight DDNS client for Porkbun
+Description=Oink! A lightweight DDNS client for Porkbun
 After=multi-user.target
 
 [Service]

@@ -25,7 +25,7 @@ install: build
 	@chmod 644 /lib/systemd/system/oink_ddns.service
 
 # advice the user
-	@echo -e "\033[38;2;255;133;162mOink installed successfully\033[0m"
+	@echo "\033[38;2;255;133;162mOink installed successfully\033[0m"
 	@echo "Please remember to edit /etc/oink_ddns/config.json before enabling the DDNS client using 'systemctl enable oink_ddns.service' 'systemctl start oink_ddns.service'"
 
 uninstall:
@@ -42,4 +42,4 @@ uninstall:
 	@rm /lib/systemd/system/oink_ddns.service
 
 # notify the user
-	@echo -e "\033[38;2;255;133;162mOink uninstalled successfully\033[0m"
+	@echo "\033[38;2;255;133;162mOink uninstalled successfully\033[0m"

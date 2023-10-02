@@ -1,4 +1,5 @@
-# Oink!
+<img src="Oink!.png" alt="Oink!" width="500"/>
+
 ## A lightweight DDNS client for [Porkbun](https://porkbun.com)
 
 > NOTE: **Oink!** is in BETA. If you encounter any bugs please report them at https://github.com/RLado/Oink!

@@ -43,7 +43,7 @@ uninstall:
 # completely remove the binary and configuration file
 	@rm ${DESTDIR}/usr/bin/${BINARY_NAME}
 	@rm ${DESTDIR}/etc/oink_ddns/config.json
-	@rm ${DESTDIR}/etc/oink_ddns
+	@rmdir ${DESTDIR}/etc/oink_ddns
 
 # remove systemd service
 	@systemctl stop oink_ddns.service
@@ -52,7 +52,7 @@ uninstall:
 
 # remove license
 	@rm ${DESTDIR}/usr/share/licenses/oink/LICENSE
-	@rm ${DESTDIR}/usr/share/licenses/oink
+	@rmdir ${DESTDIR}/usr/share/licenses/oink
 
 # notify the user
 	@echo "\033[38;2;255;133;162mOink uninstalled successfully\033[0m"

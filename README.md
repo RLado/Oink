@@ -15,6 +15,11 @@ You can install **Oink!** using an [official package](https://github.com/RLado/O
 dpkg -i <oink_pkg>.deb
 ```
 
+#### On Arch-based distros
+```bash
+pacman -U <oink_pkg>.pkg.tar.zst 
+```
+
 #### Or you can build from source and install using *make*
 > Requires *make* and *go*
 ```bash

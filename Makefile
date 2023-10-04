@@ -13,6 +13,7 @@ install: build
 	@if [ `id -u` -ne 0 ]; then echo "Please run as root"; exit 1; fi
 
 # install binary
+	@mkdir -p ${DESTDIR}/usr/bin/
 	@cp ${BINARY_NAME} ${DESTDIR}/usr/bin/${BINARY_NAME}
 	@chmod 755 ${DESTDIR}/usr/bin/${BINARY_NAME}
 
@@ -22,6 +23,7 @@ install: build
 	@chmod 600 ${DESTDIR}/etc/oink_ddns/config.json
 
 # install systemd service
+	@mkdir -p ${DESTDIR}/lib/systemd/system/
 	@cp config/oink_ddns.service ${DESTDIR}/lib/systemd/system/oink_ddns.service
 	@chmod 644 ${DESTDIR}/lib/systemd/system/oink_ddns.service
 
@@ -36,6 +38,7 @@ uninstall:
 # completely remove the binary and configuration file
 	@rm ${DESTDIR}/usr/bin/${BINARY_NAME}
 	@rm ${DESTDIR}/etc/oink_ddns/config.json
+	@rm ${DESTDIR}/etc/oink_ddns
 
 # remove systemd service
 	@systemctl stop oink_ddns.service

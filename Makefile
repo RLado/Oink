@@ -1,4 +1,5 @@
-BINARY_NAME=oink
+BINARY_NAME:=oink
+DESTDIR:= 
  
 build:
 	@go build -o ${BINARY_NAME} src/main.go
@@ -12,17 +13,17 @@ install: build
 	@if [ `id -u` -ne 0 ]; then echo "Please run as root"; exit 1; fi
 
 # install binary
-	@cp ${BINARY_NAME} /usr/bin/${BINARY_NAME}
-	@chmod 755 /usr/bin/${BINARY_NAME}
+	@cp ${BINARY_NAME} ${DESTDIR}/usr/bin/${BINARY_NAME}
+	@chmod 755 ${DESTDIR}/usr/bin/${BINARY_NAME}
 
 # install configuration file
-	@mkdir -p /etc/oink_ddns/
-	@cp config/config.json /etc/oink_ddns/config.json
-	@chmod 600 /etc/oink_ddns/config.json
+	@mkdir -p ${DESTDIR}/etc/oink_ddns/
+	@cp config/config.json ${DESTDIR}/etc/oink_ddns/config.json
+	@chmod 600 ${DESTDIR}/etc/oink_ddns/config.json
 
 # install systemd service
-	@cp config/oink_ddns.service /lib/systemd/system/oink_ddns.service
-	@chmod 644 /lib/systemd/system/oink_ddns.service
+	@cp config/oink_ddns.service ${DESTDIR}/lib/systemd/system/oink_ddns.service
+	@chmod 644 ${DESTDIR}/lib/systemd/system/oink_ddns.service
 
 # advice the user
 	@echo "\033[38;2;255;133;162mOink installed successfully\033[0m"
@@ -33,13 +34,13 @@ uninstall:
 	@if [ `id -u` -ne 0 ]; then echo "Please run as root"; exit 1; fi
 
 # completely remove the binary and configuration file
-	@rm /usr/bin/${BINARY_NAME}
-	@rm /etc/oink_ddns/config.json
+	@rm ${DESTDIR}/usr/bin/${BINARY_NAME}
+	@rm ${DESTDIR}/etc/oink_ddns/config.json
 
 # remove systemd service
 	@systemctl stop oink_ddns.service
 	@systemctl disable oink_ddns.service
-	@rm /lib/systemd/system/oink_ddns.service
+	@rm ${DESTDIR}/lib/systemd/system/oink_ddns.service
 
 # notify the user
 	@echo "\033[38;2;255;133;162mOink uninstalled successfully\033[0m"

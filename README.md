@@ -16,6 +16,7 @@ dpkg -i <oink_pkg>.deb
 ```
 
 #### On Arch-based distros
+*Note: Also available in the [AUR](https://aur.archlinux.org/packages/oink)*
 ```bash
 pacman -U <oink_pkg>.pkg.tar.zst 
 ```

@@ -3,9 +3,8 @@
 * A lightweight DDNS client for porkbun.com
 *
 * Author: Ricard Lado <ricard@lado.one>
-* Repository:
+* Repository: https://github.com/RLado/Oink
 *
-* Version: 0.1
 * License: MIT
  */
 
@@ -25,13 +24,23 @@ import (
 )
 
 type Config struct {
+	Global  GlobConfig
+	Domains []DomConfig
+}
+
+type GlobConfig struct {
+	Secretapikey string
+	Apikey       string
+	Interval     int
+	Ttl          int
+}
+
+type DomConfig struct {
 	Secretapikey string
 	Apikey       string
 	Domain       string
 	Subdomain    string
 	Ttl          int
-	Priority     int
-	Interval     int
 }
 
 type IP struct {
@@ -41,7 +50,7 @@ type IP struct {
 
 // Get the current IP address
 // Requests the IP address from the porkbun API & checks if the API keys are valid
-func get_ip(config Config) (IP, error) {
+func get_ip(config DomConfig) (IP, error) {
 	ip := IP{}
 
 	client := http.Client{
@@ -97,7 +106,7 @@ func get_ip(config Config) (IP, error) {
 // Update the DNS record
 // Updates the DNS record with the current IP address
 // Returns true if the record was updated, false if it wasn't
-func update_dns(config Config, ip IP) (bool, error) {
+func update_dns(config DomConfig, ip IP) (bool, error) {
 	client := http.Client{
 		Timeout: 30 * time.Second,
 	}
@@ -155,26 +164,8 @@ func update_dns(config Config, ip IP) (bool, error) {
 			// Save the record ID
 			record_id = data["records"].([]interface{})[0].(map[string]interface{})["id"].(string)
 		}
-	} else if len(data["records"].([]interface{})) > 1 { // Multiple records found. Update if a record with a "ddns" annotation is found
-		log.Printf("Warning: Multiple records found, make sure to add a \"ddns\" annotation to the record you wish to update")
-		annotation_found := false
-
-		// Look for a record with a notes value of "ddns"
-		for _, record := range data["records"].([]interface{}) {
-			if record.(map[string]interface{})["notes"].(string) == "ddns" {
-				annotation_found = true
-				// Check if the record needs to be updated
-				if record.(map[string]interface{})["content"].(string) != ip.Ip {
-					// Update the record
-					update_req = true
-					// Save the record ID
-					record_id = record.(map[string]interface{})["id"].(string)
-				}
-			}
-		}
-		if !annotation_found {
-			log.Fatal("Error: Multiple records found, but none with a \"ddns\" annotation")
-		}
+	} else if len(data["records"].([]interface{})) > 1 { // Multiple records found. Avoid updating
+		log.Printf("Warning: Multiple records found for %s.%s -- Not updating any records", config.Subdomain, config.Domain)
 	}
 
 	// Update the record
@@ -190,7 +181,6 @@ func update_dns(config Config, ip IP) (bool, error) {
 		"type":         recordType,
 		"content":      ip.Ip,
 		"ttl":          fmt.Sprint(config.Ttl),
-		"prio":         fmt.Sprint(config.Priority),
 	})
 	if err != nil {
 		return false, fmt.Errorf("error building request body: %s", err)
@@ -224,7 +214,7 @@ func update_dns(config Config, ip IP) (bool, error) {
 
 // Create a new DNS record
 // Creates a new DNS record with the current IP address
-func create_record(config Config, ip IP) (bool, error) {
+func create_record(config DomConfig, ip IP) (bool, error) {
 	client := http.Client{
 		Timeout: 30 * time.Second,
 	}
@@ -244,7 +234,6 @@ func create_record(config Config, ip IP) (bool, error) {
 		"type":         recordType,
 		"content":      ip.Ip,
 		"ttl":          fmt.Sprint(config.Ttl),
-		"prio":         fmt.Sprint(config.Priority),
 	})
 	if err != nil {
 		return false, fmt.Errorf("error building request body: %s", err)
@@ -299,35 +288,66 @@ func main() {
 		log.Fatalf("Error decoding config file: %s", err)
 	}
 
+	// Enforce minimum interval of 60 seconds
+	if config.Global.Interval < 60 {
+		if *verbose {
+			log.Printf("Warning: Minimum interval is 60 seconds, setting interval to 60 seconds")
+		}
+		config.Global.Interval = 60
+	}
+
 	// Run the update loop
 	for {
-		if *verbose {
-			log.Printf("Updating record: %s.%s", config.Subdomain, config.Domain)
-		}
-		// Get current IP address
-		current_ip, err := get_ip(config)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		if *verbose {
-			log.Printf("Current IP address: %s", current_ip.Ip)
-		}
+		// Update domains
+		for _, domConfig := range config.Domains {
+			// Fill in missing values from the global config
+			if domConfig.Secretapikey == "" {
+				domConfig.Secretapikey = config.Global.Secretapikey
+			}
+			if domConfig.Apikey == "" {
+				domConfig.Apikey = config.Global.Apikey
+			}
+			if domConfig.Ttl == 0 {
+				domConfig.Ttl = config.Global.Ttl
+			}
 
-		// Update DNS record
-		updated, err := update_dns(config, current_ip)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		if updated {
-			log.Printf("Record updated successfully to: %s", current_ip.Ip)
-		} else if *verbose {
-			log.Printf("Record is already up to date")
+			// Enforce minimum TTL of 600 seconds (as defined by porkbun)
+			if domConfig.Ttl < 600 {
+				if *verbose {
+					log.Printf("Warning: Minimum TTL is 600 seconds, setting TTL for %s.%s to 600 seconds", domConfig.Subdomain, domConfig.Domain)
+				}
+				domConfig.Ttl = 600
+			}
+
+			// Start the update record process
+			if *verbose {
+				log.Printf("Updating record: %s.%s", domConfig.Subdomain, domConfig.Domain)
+			}
+			// Get current IP address
+			current_ip, err := get_ip(domConfig)
+			if err != nil {
+				log.Fatalln(err)
+			}
+			if *verbose {
+				log.Printf("Current IP address: %s", current_ip.Ip)
+			}
+
+			// Update DNS record
+			updated, err := update_dns(domConfig, current_ip)
+			if err != nil {
+				log.Fatalln(err)
+			}
+			if updated {
+				log.Printf("Record %s.%s updated successfully to: %s", domConfig.Subdomain, domConfig.Domain, current_ip.Ip)
+			} else if *verbose {
+				log.Printf("Record is already up to date")
+			}
 		}
 
 		// Wait for the next update
 		if *verbose {
-			log.Printf("Waiting %d seconds for the next update", config.Interval)
+			log.Printf("Waiting %d seconds for the next update", config.Global.Interval)
 		}
-		time.Sleep(time.Duration(config.Interval) * time.Second)
+		time.Sleep(time.Duration(config.Global.Interval) * time.Second)
 	}
 }

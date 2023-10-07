@@ -10,7 +10,7 @@ clean:
 
 install: build
 # check the user is root
-	@if [ `id -u` -ne 0 ]; then echo "Please run as root"; exit 1; fi
+	@if [ `id -u` -ne 0 ]; then printf "\033[33mWarning: This operation might require superuser privileges\033[0m\n"; fi
 
 # install binary
 	@mkdir -p ${DESTDIR}/usr/bin/
@@ -33,12 +33,12 @@ install: build
 	@chmod 644 ${DESTDIR}/usr/share/licenses/oink/LICENSE
 
 # advice the user
-	@echo "\033[38;2;255;133;162mOink installed successfully\033[0m"
+	@printf "\033[38;2;255;133;162mOink installed successfully\033[0m\n"
 	@echo "Please remember to edit /etc/oink_ddns/config.json before enabling the DDNS client using 'systemctl enable oink_ddns.service' 'systemctl start oink_ddns.service'"
 
 uninstall:
 # check the user is root
-	@if [ `id -u` -ne 0 ]; then echo "Please run as root"; exit 1; fi
+	@if [ `id -u` -ne 0 ]; then printf "\033[33mWarning: This operation might require superuser privileges\033[0m\n"; fi
 
 # completely remove the binary and configuration file
 	@rm ${DESTDIR}/usr/bin/${BINARY_NAME}
@@ -55,4 +55,4 @@ uninstall:
 	@rmdir ${DESTDIR}/usr/share/licenses/oink
 
 # notify the user
-	@echo "\033[38;2;255;133;162mOink uninstalled successfully\033[0m"
+	@printf "\033[38;2;255;133;162mOink uninstalled successfully\033[0m\n"

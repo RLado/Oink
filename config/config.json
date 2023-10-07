@@ -1,9 +1,14 @@
 {
-    "secretapikey": "<your secret api key here>",
-    "apikey": "<your api key here>",
-    "domain": "<your domain here>",
-    "subdomain": "<your subdomain here>",
-    "ttl": 600,
-    "priority": 0,
-    "interval": 300
+    "global": {
+        "secretapikey": "<your secret api key here>",
+        "apikey": "<your api key here>",
+        "interval": 900,
+        "ttl": 600
+    },
+    "domains": [
+        {
+            "domain": "<your domain here>",
+            "subdomain": "<your subdomain here>"
+        }
+    ]
 }

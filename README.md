@@ -9,6 +9,8 @@
 ### How to install
 You can install **Oink!** using an [official package](https://github.com/RLado/Oink/releases) or by using *make*.
 
+[![Get it from the Snap Store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/oink)
+
 #### On distributions supporting .deb files (Debian, Ubuntu, ...)
 ```bash
 dpkg -i <oink_pkg>.deb

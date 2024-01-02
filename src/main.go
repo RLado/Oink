@@ -50,7 +50,7 @@ type IP struct {
 
 // Get the current IP address
 // Requests the IP address from the porkbun API & checks if the API keys are valid
-func get_ip(config DomConfig) (IP, error) {
+func getIp(config DomConfig) (IP, error) {
 	ip := IP{}
 
 	client := http.Client{
@@ -106,7 +106,7 @@ func get_ip(config DomConfig) (IP, error) {
 // Update the DNS record
 // Updates the DNS record with the current IP address
 // Returns true if the record was updated, false if it wasn't
-func update_dns(config DomConfig, ip IP) (bool, error) {
+func updateDns(config DomConfig, ip IP) (bool, error) {
 	client := http.Client{
 		Timeout: 30 * time.Second,
 	}
@@ -152,24 +152,24 @@ func update_dns(config DomConfig, ip IP) (bool, error) {
 	}
 
 	// Check if the record needs to be updated
-	var update_req bool
-	var record_id string
+	var updateReq bool
+	var recordId string
 	if len(data["records"].([]interface{})) == 0 { // No records found. Create a new one
 		// Create a new record
-		return create_record(config, ip)
+		return createRecord(config, ip)
 	} else if len(data["records"].([]interface{})) == 1 { // One record is found. Update if required
 		if data["records"].([]interface{})[0].(map[string]interface{})["content"].(string) != ip.Ip {
 			// Update the record
-			update_req = true
+			updateReq = true
 			// Save the record ID
-			record_id = data["records"].([]interface{})[0].(map[string]interface{})["id"].(string)
+			recordId = data["records"].([]interface{})[0].(map[string]interface{})["id"].(string)
 		}
 	} else if len(data["records"].([]interface{})) > 1 { // Multiple records found. Avoid updating
 		log.Printf("Warning: Multiple records found for %s.%s -- Not updating any records", config.Subdomain, config.Domain)
 	}
 
 	// Update the record
-	if !update_req {
+	if !updateReq {
 		return false, nil
 	}
 
@@ -187,7 +187,7 @@ func update_dns(config DomConfig, ip IP) (bool, error) {
 	}
 
 	// Send API request
-	resp, err = client.Post(fmt.Sprintf("https://porkbun.com/api/json/v3/dns/edit/%s/%s", config.Domain, record_id), "application/json", bytes.NewBuffer(jsonValue))
+	resp, err = client.Post(fmt.Sprintf("https://porkbun.com/api/json/v3/dns/edit/%s/%s", config.Domain, recordId), "application/json", bytes.NewBuffer(jsonValue))
 	if err != nil {
 		return false, fmt.Errorf("error sending API request: %s", err)
 	}
@@ -214,7 +214,7 @@ func update_dns(config DomConfig, ip IP) (bool, error) {
 
 // Create a new DNS record
 // Creates a new DNS record with the current IP address
-func create_record(config DomConfig, ip IP) (bool, error) {
+func createRecord(config DomConfig, ip IP) (bool, error) {
 	client := http.Client{
 		Timeout: 30 * time.Second,
 	}
@@ -269,21 +269,21 @@ func create_record(config DomConfig, ip IP) (bool, error) {
 
 func main() {
 	// Flags
-	config_path := flag.String("c", "/etc/oink_ddns/config.json", "Path to oink_ddns configuration file")
+	configPath := flag.String("c", "/etc/oink_ddns/config.json", "Path to oink_ddns configuration file")
 	verbose := flag.Bool("v", false, "Enable verbose output")
 
 	flag.Parse()
 
 	// Parse config file
-	file, err := os.Open(*config_path)
+	file, err := os.Open(*configPath)
 	if err != nil {
 		log.Fatalf("Error opening config file: %s", err)
 	}
 	defer file.Close()
 
-	json_decoder := json.NewDecoder(file)
+	jsonDecoder := json.NewDecoder(file)
 	config := Config{}
-	err = json_decoder.Decode(&config)
+	err = jsonDecoder.Decode(&config)
 	if err != nil {
 		log.Fatalf("Error decoding config file: %s", err)
 	}
@@ -324,21 +324,21 @@ func main() {
 				log.Printf("Updating record: %s.%s", domConfig.Subdomain, domConfig.Domain)
 			}
 			// Get current IP address
-			current_ip, err := get_ip(domConfig)
+			currentIp, err := getIp(domConfig)
 			if err != nil {
 				log.Fatalln(err)
 			}
 			if *verbose {
-				log.Printf("Current IP address: %s", current_ip.Ip)
+				log.Printf("Current IP address: %s", currentIp.Ip)
 			}
 
 			// Update DNS record
-			updated, err := update_dns(domConfig, current_ip)
+			updated, err := updateDns(domConfig, currentIp)
 			if err != nil {
 				log.Fatalln(err)
 			}
 			if updated {
-				log.Printf("Record %s.%s updated successfully to: %s", domConfig.Subdomain, domConfig.Domain, current_ip.Ip)
+				log.Printf("Record %s.%s updated successfully to: %s", domConfig.Subdomain, domConfig.Domain, currentIp.Ip)
 			} else if *verbose {
 				log.Printf("Record is already up to date")
 			}

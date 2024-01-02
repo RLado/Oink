@@ -32,6 +32,8 @@ sudo make install
 
 You may **uninstall** using `sudo make uninstall` to remove **all** configuration files and binaries
 
+> For distributions using init systems other than **systemd** alternative init scripts are provided in the `init` directory
+
 ---
 ### How to setup
 The setup process is simple:

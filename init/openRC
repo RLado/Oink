@@ -1,0 +1,13 @@
+#!/sbin/openrc-run
+
+##/etc/init.d/oink_ddns
+
+name="oink_ddns"
+cfgfile="/etc/oink_ddns/config.json"
+command="/usr/bin/oink"
+pidfile="/run/oink_ddns/oink_ddns.pid"
+command_background="yes"
+
+start_pre() {
+    checkpath --directory --owner root:root --mode 0775 /run/oink_ddns
+}

@@ -103,6 +103,61 @@ func getIp(config DomConfig) (IP, error) {
 	return ip, nil
 }
 
+// Get the current IPv4 address
+// Requests the IP address from the porkbun API & checks if the API keys are valid
+func getIp4(config DomConfig) (IP, error) {
+	ip := IP{}
+
+	client := http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	// Prepare request body
+	jsonValue, err := json.Marshal(map[string]string{
+		"secretapikey": config.Secretapikey,
+		"apikey":       config.Apikey,
+	})
+	if err != nil {
+		return ip, fmt.Errorf("error building request body: %s", err)
+	}
+
+	// Send API request
+	resp, err := client.Post("https://api-ipv4.porkbun.com/api/json/v3/ping", "application/json", bytes.NewBuffer(jsonValue))
+	if err != nil {
+		return ip, fmt.Errorf("error sending API request: %s", err)
+	}
+	defer resp.Body.Close()
+
+	// Parse API response
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return ip, fmt.Errorf("error reading API response: %s", err)
+	}
+
+	var data map[string]interface{}
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		return ip, fmt.Errorf("error decoding API response: %s", err)
+	}
+
+	// Use the response
+	if data["status"].(string) != "SUCCESS" {
+		return ip, fmt.Errorf("error: %s", data["message"].(string))
+	}
+	ip.Ip = data["yourIp"].(string)
+
+	// Read whether the IP address is IPv4 or IPv6 (should be IPv4)
+	if net.ParseIP(ip.Ip).To4() != nil {
+		ip.IpVer = "ipv4"
+	} else if net.ParseIP(ip.Ip).To16() != nil {
+		ip.IpVer = "ipv6"
+	} else {
+		return ip, fmt.Errorf("error parsing IP address: %s", ip.Ip)
+	}
+
+	return ip, nil
+}
+
 // Update the DNS record
 // Updates the DNS record with the current IP address
 // Returns true if the record was updated, false if it wasn't
@@ -338,9 +393,41 @@ func main() {
 				log.Fatalln(err)
 			}
 			if updated {
-				log.Printf("Record %s.%s updated successfully to: %s", domConfig.Subdomain, domConfig.Domain, currentIp.Ip)
+				if currentIp.IpVer == "ipv4" {
+					log.Printf("A record for %s.%s updated successfully to: %s", domConfig.Subdomain, domConfig.Domain, currentIp.Ip)
+				} else if currentIp.IpVer == "ipv6" {
+					log.Printf("AAAA record for %s.%s updated successfully to: %s", domConfig.Subdomain, domConfig.Domain, currentIp.Ip)
+				}
 			} else if *verbose {
 				log.Printf("Record is already up to date")
+			}
+
+			// If the IP address found was IPv6 check if an IPv4 address is also available
+			if currentIp.IpVer == "ipv6" {
+				if *verbose {
+					log.Printf("IPv6 address found, checking for IPv4")
+				}
+				ipv4, err := getIp4(domConfig)
+				if err != nil {
+					if *verbose {
+						log.Printf("No IPv4 address found: %s", err)
+					}
+				} else {
+					if *verbose {
+						log.Printf("IPv4 address found: %s", ipv4.Ip)
+					}
+
+					// Update DNS record
+					updated, err := updateDns(domConfig, ipv4)
+					if err != nil {
+						log.Fatalln(err)
+					}
+					if updated {
+						log.Printf("A record for %s.%s updated successfully to: %s", domConfig.Subdomain, domConfig.Domain, ipv4.Ip)
+					} else if *verbose {
+						log.Printf("Record is already up to date")
+					}
+				}
 			}
 		}
 

@@ -15,7 +15,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"net/http"
@@ -23,204 +22,233 @@ import (
 	"time"
 )
 
-type Config struct {
-	Global  GlobConfig
-	Domains []DomConfig
+type config struct {
+	Global  globConfig  `json:"global"`
+	Domains []domConfig `json:"domains"`
 }
 
-type GlobConfig struct {
-	Secretapikey string
-	Apikey       string
-	Interval     int
-	Ttl          int
+type globConfig struct {
+	Secretapikey string `json:"secretapikey"`
+	Apikey       string `json:"apikey"`
+	Interval     int    `json:"interval"`
+	Ttl          int    `json:"ttl"`
 }
 
-type DomConfig struct {
-	Secretapikey string
-	Apikey       string
-	Domain       string
-	Subdomain    string
-	Ttl          int
+type domConfig struct {
+	Secretapikey string `json:"secretapikey"`
+	Apikey       string `json:"apikey"`
+	Domain       string `json:"domain"`
+	Subdomain    string `json:"subdomain"`
+	Ttl          int    `json:"ttl"`
 }
 
-type IP struct {
+type ip struct {
 	Ip    string
 	IpVer string
 }
 
+// Response types
+type statusResp struct {
+	Status  string `json:"status"`
+	Id      string `json:"id"`
+	Message string `json:"message"`
+}
+
+type pingResp struct {
+	Status  string `json:"status"`
+	Ip      string `json:"yourIp"`
+	Message string `json:"message"`
+}
+
+type dnsResp struct {
+	Status  string   `json:"status"`
+	Records []record `json:"records"`
+	Message string   `json:"message"`
+}
+
+type record struct {
+	Id      string `json:"id"`
+	Name    string `json:"name"`
+	Type    string `json:"type"`
+	Content string `json:"content"`
+	Ttl     string `json:"ttl"`
+	Prio    string `json:"prio"`
+	Notes   string `json:"notes"`
+}
+
+// Request types
+type authReq struct {
+	Secretapikey string `json:"secretapikey"`
+	Apikey       string `json:"apikey"`
+}
+
+type recordReq struct {
+	Secretapikey string `json:"secretapikey"`
+	Apikey       string `json:"apikey"`
+	Name         string `json:"name"`
+	Type         string `json:"type"`
+	Content      string `json:"content"`
+	Ttl          string `json:"ttl"`
+}
+
 // Get the current IP address
 // Requests the IP address from the porkbun API & checks if the API keys are valid
-func getIp(config DomConfig) (IP, error) {
-	ip := IP{}
+func getIp(cfg domConfig) (ip, error) {
+	ipAddr := ip{}
 
 	client := http.Client{
 		Timeout: 30 * time.Second,
 	}
 
 	// Prepare request body
-	jsonValue, err := json.Marshal(map[string]string{
-		"secretapikey": config.Secretapikey,
-		"apikey":       config.Apikey,
+	reqBody, err := json.Marshal(authReq{
+		Secretapikey: cfg.Secretapikey,
+		Apikey:       cfg.Apikey,
 	})
 	if err != nil {
-		return ip, fmt.Errorf("error building request body: %s", err)
+		return ipAddr, fmt.Errorf("error building request body: %s", err)
 	}
 
 	// Send API request
-	resp, err := client.Post("https://porkbun.com/api/json/v3/ping", "application/json", bytes.NewBuffer(jsonValue))
+	resp, err := client.Post("https://porkbun.com/api/json/v3/ping", "application/json", bytes.NewBuffer(reqBody))
 	if err != nil {
-		return ip, fmt.Errorf("error sending API request: %s", err)
+		return ipAddr, fmt.Errorf("error sending API request: %s", err)
 	}
 	defer resp.Body.Close()
 
 	// Parse API response
-	body, err := io.ReadAll(resp.Body)
+	var data pingResp
+	err = json.NewDecoder(resp.Body).Decode(&data)
 	if err != nil {
-		return ip, fmt.Errorf("error reading API response: %s", err)
-	}
-
-	var data map[string]interface{}
-	err = json.Unmarshal(body, &data)
-	if err != nil {
-		return ip, fmt.Errorf("error decoding API response: %s", err)
+		return ipAddr, fmt.Errorf("error decoding API response: %s (status: %d)", err, resp.StatusCode)
 	}
 
 	// Use the response
-	if data["status"].(string) != "SUCCESS" {
-		return ip, fmt.Errorf("error: %s", data["message"].(string))
+	if data.Status != "SUCCESS" {
+		return ipAddr, fmt.Errorf("error %d: %s", resp.StatusCode, data.Message)
 	}
-	ip.Ip = data["yourIp"].(string)
+	ipAddr.Ip = data.Ip
 
 	// Read whether the IP address is IPv4 or IPv6
-	if net.ParseIP(ip.Ip).To4() != nil {
-		ip.IpVer = "ipv4"
-	} else if net.ParseIP(ip.Ip).To16() != nil {
-		ip.IpVer = "ipv6"
+	if net.ParseIP(ipAddr.Ip).To4() != nil {
+		ipAddr.IpVer = "ipv4"
+	} else if net.ParseIP(ipAddr.Ip).To16() != nil {
+		ipAddr.IpVer = "ipv6"
 	} else {
-		return ip, fmt.Errorf("error parsing IP address: %s", ip.Ip)
+		return ipAddr, fmt.Errorf("error parsing IP address: %s", ipAddr.Ip)
 	}
 
-	return ip, nil
+	return ipAddr, nil
 }
 
 // Get the current IPv4 address
 // Requests the IP address from the porkbun API & checks if the API keys are valid
-func getIp4(config DomConfig) (IP, error) {
-	ip := IP{}
+func getIp4(cfg domConfig) (ip, error) {
+	ipAddr := ip{}
 
 	client := http.Client{
 		Timeout: 30 * time.Second,
 	}
 
 	// Prepare request body
-	jsonValue, err := json.Marshal(map[string]string{
-		"secretapikey": config.Secretapikey,
-		"apikey":       config.Apikey,
+	reqBody, err := json.Marshal(authReq{
+		Secretapikey: cfg.Secretapikey,
+		Apikey:       cfg.Apikey,
 	})
 	if err != nil {
-		return ip, fmt.Errorf("error building request body: %s", err)
+		return ipAddr, fmt.Errorf("error building request body: %s", err)
 	}
 
 	// Send API request
-	resp, err := client.Post("https://api-ipv4.porkbun.com/api/json/v3/ping", "application/json", bytes.NewBuffer(jsonValue))
+	resp, err := client.Post("https://api-ipv4.porkbun.com/api/json/v3/ping", "application/json", bytes.NewBuffer(reqBody))
 	if err != nil {
-		return ip, fmt.Errorf("error sending API request: %s", err)
+		return ipAddr, fmt.Errorf("error sending API request: %s", err)
 	}
 	defer resp.Body.Close()
 
 	// Parse API response
-	body, err := io.ReadAll(resp.Body)
+	var data pingResp
+	err = json.NewDecoder(resp.Body).Decode(&data)
 	if err != nil {
-		return ip, fmt.Errorf("error reading API response: %s", err)
-	}
-
-	var data map[string]interface{}
-	err = json.Unmarshal(body, &data)
-	if err != nil {
-		return ip, fmt.Errorf("error decoding API response: %s", err)
+		return ipAddr, fmt.Errorf("error decoding API response: %s (status: %d)", err, resp.StatusCode)
 	}
 
 	// Use the response
-	if data["status"].(string) != "SUCCESS" {
-		return ip, fmt.Errorf("error: %s", data["message"].(string))
+	if data.Status != "SUCCESS" {
+		return ipAddr, fmt.Errorf("error %d: %s", resp.StatusCode, data.Message)
 	}
-	ip.Ip = data["yourIp"].(string)
+	ipAddr.Ip = data.Ip
 
 	// Read whether the IP address is IPv4 or IPv6 (should be IPv4)
-	if net.ParseIP(ip.Ip).To4() != nil {
-		ip.IpVer = "ipv4"
-	} else if net.ParseIP(ip.Ip).To16() != nil {
-		ip.IpVer = "ipv6"
+	if net.ParseIP(ipAddr.Ip).To4() != nil {
+		ipAddr.IpVer = "ipv4"
+	} else if net.ParseIP(ipAddr.Ip).To16() != nil {
+		ipAddr.IpVer = "ipv6"
 	} else {
-		return ip, fmt.Errorf("error parsing IP address: %s", ip.Ip)
+		return ipAddr, fmt.Errorf("error parsing IP address: %s", ipAddr.Ip)
 	}
 
-	return ip, nil
+	return ipAddr, nil
 }
 
 // Update the DNS record
 // Updates the DNS record with the current IP address
 // Returns true if the record was updated, false if it wasn't
-func updateDns(config DomConfig, ip IP) (bool, error) {
+func updateDns(cfg domConfig, ipAddr ip) (bool, error) {
 	client := http.Client{
 		Timeout: 30 * time.Second,
 	}
 
 	// Prepare request body
-	jsonValue, err := json.Marshal(map[string]string{
-		"secretapikey": config.Secretapikey,
-		"apikey":       config.Apikey,
+	reqBody, err := json.Marshal(authReq{
+		Secretapikey: cfg.Secretapikey,
+		Apikey:       cfg.Apikey,
 	})
 	if err != nil {
 		return false, fmt.Errorf("error building request body: %s", err)
 	}
 
 	var recordType string
-	if ip.IpVer == "ipv4" {
+	if ipAddr.IpVer == "ipv4" {
 		recordType = "A"
-	} else if ip.IpVer == "ipv6" {
+	} else if ipAddr.IpVer == "ipv6" {
 		recordType = "AAAA"
 	}
 
 	// Send API request
-	resp, err := client.Post(fmt.Sprintf("https://porkbun.com/api/json/v3/dns/retrieveByNameType/%s/%s/%s", config.Domain, recordType, config.Subdomain), "application/json", bytes.NewBuffer(jsonValue))
+	resp, err := client.Post(fmt.Sprintf("https://porkbun.com/api/json/v3/dns/retrieveByNameType/%s/%s/%s", cfg.Domain, recordType, cfg.Subdomain), "application/json", bytes.NewBuffer(reqBody))
 	if err != nil {
 		return false, fmt.Errorf("error sending API request: %s", err)
 	}
 	defer resp.Body.Close()
 
 	// Parse API response
-	body, err := io.ReadAll(resp.Body)
+	var data dnsResp
+	err = json.NewDecoder(resp.Body).Decode(&data)
 	if err != nil {
-		return false, fmt.Errorf("error reading API response: %s", err)
-	}
-
-	var data map[string]interface{}
-	err = json.Unmarshal(body, &data)
-	if err != nil {
-		return false, fmt.Errorf("error decoding API response: %s", err)
+		return false, fmt.Errorf("error decoding API response: %s (status: %d)", err, resp.StatusCode)
 	}
 
 	// Use the response
-	if data["status"].(string) != "SUCCESS" {
-		return false, fmt.Errorf("error: %s", data["message"].(string))
+	if data.Status != "SUCCESS" {
+		return false, fmt.Errorf("error %d: %s", resp.StatusCode, data.Message)
 	}
 
 	// Check if the record needs to be updated
 	var updateReq bool
 	var recordId string
-	if len(data["records"].([]interface{})) == 0 { // No records found. Create a new one
+	if len(data.Records) == 0 { // No records found. Create a new one
 		// Create a new record
-		return createRecord(config, ip)
-	} else if len(data["records"].([]interface{})) == 1 { // One record is found. Update if required
-		if data["records"].([]interface{})[0].(map[string]interface{})["content"].(string) != ip.Ip {
+		return createRecord(cfg, ipAddr)
+	} else if len(data.Records) == 1 { // One record is found. Update if required
+		if data.Records[0].Content != ipAddr.Ip {
 			// Update the record
 			updateReq = true
 			// Save the record ID
-			recordId = data["records"].([]interface{})[0].(map[string]interface{})["id"].(string)
+			recordId = data.Records[0].Id
 		}
-	} else if len(data["records"].([]interface{})) > 1 { // Multiple records found. Avoid updating
-		log.Printf("Warning: Multiple records found for %s.%s -- Not updating any records", config.Subdomain, config.Domain)
+	} else if len(data.Records) > 1 { // Multiple records found. Avoid updating
+		log.Printf("Warning: Multiple records found for %s.%s -- Not updating any records", cfg.Subdomain, cfg.Domain)
 	}
 
 	// Update the record
@@ -229,39 +257,35 @@ func updateDns(config DomConfig, ip IP) (bool, error) {
 	}
 
 	// Prepare request body
-	jsonValue, err = json.Marshal(map[string]string{
-		"secretapikey": config.Secretapikey,
-		"apikey":       config.Apikey,
-		"name":         config.Subdomain,
-		"type":         recordType,
-		"content":      ip.Ip,
-		"ttl":          fmt.Sprint(config.Ttl),
+	reqBody, err = json.Marshal(recordReq{
+		Secretapikey: cfg.Secretapikey,
+		Apikey:       cfg.Apikey,
+		Name:         cfg.Subdomain,
+		Type:         recordType,
+		Content:      ipAddr.Ip,
+		Ttl:          fmt.Sprint(cfg.Ttl),
 	})
 	if err != nil {
 		return false, fmt.Errorf("error building request body: %s", err)
 	}
 
 	// Send API request
-	resp, err = client.Post(fmt.Sprintf("https://porkbun.com/api/json/v3/dns/edit/%s/%s", config.Domain, recordId), "application/json", bytes.NewBuffer(jsonValue))
+	resp, err = client.Post(fmt.Sprintf("https://porkbun.com/api/json/v3/dns/edit/%s/%s", cfg.Domain, recordId), "application/json", bytes.NewBuffer(reqBody))
 	if err != nil {
 		return false, fmt.Errorf("error sending API request: %s", err)
 	}
 	defer resp.Body.Close()
 
 	// Parse API response
-	body, err = io.ReadAll(resp.Body)
+	var status statusResp
+	err = json.NewDecoder(resp.Body).Decode(&status)
 	if err != nil {
-		return false, fmt.Errorf("error reading API response: %s", err)
-	}
-
-	err = json.Unmarshal(body, &data)
-	if err != nil {
-		return false, fmt.Errorf("error decoding API response: %s", err)
+		return false, fmt.Errorf("error decoding API response: %s (status: %d)", err, resp.StatusCode)
 	}
 
 	// Use the response
-	if data["status"].(string) != "SUCCESS" {
-		return false, fmt.Errorf("error: %s", data["message"].(string))
+	if status.Status != "SUCCESS" {
+		return false, fmt.Errorf("error %d: %s", resp.StatusCode, status.Message)
 	}
 
 	return true, nil
@@ -269,55 +293,50 @@ func updateDns(config DomConfig, ip IP) (bool, error) {
 
 // Create a new DNS record
 // Creates a new DNS record with the current IP address
-func createRecord(config DomConfig, ip IP) (bool, error) {
+func createRecord(cfg domConfig, ipAddr ip) (bool, error) {
 	client := http.Client{
 		Timeout: 30 * time.Second,
 	}
 
 	// Prepare request body
 	var recordType string
-	if ip.IpVer == "ipv4" {
+	if ipAddr.IpVer == "ipv4" {
 		recordType = "A"
-	} else if ip.IpVer == "ipv6" {
+	} else if ipAddr.IpVer == "ipv6" {
 		recordType = "AAAA"
 	}
 
-	jsonValue, err := json.Marshal(map[string]string{
-		"secretapikey": config.Secretapikey,
-		"apikey":       config.Apikey,
-		"name":         config.Subdomain,
-		"type":         recordType,
-		"content":      ip.Ip,
-		"ttl":          fmt.Sprint(config.Ttl),
+	req, err := json.Marshal(recordReq{
+		Secretapikey: cfg.Secretapikey,
+		Apikey:       cfg.Apikey,
+		Name:         cfg.Subdomain,
+		Type:         recordType,
+		Content:      ipAddr.Ip,
+		Ttl:          fmt.Sprint(cfg.Ttl),
 	})
 	if err != nil {
 		return false, fmt.Errorf("error building request body: %s", err)
 	}
 
 	// Send API request
-	resp, err := client.Post(fmt.Sprintf("https://porkbun.com/api/json/v3/dns/create/%s", config.Domain), "application/json", bytes.NewBuffer(jsonValue))
+	resp, err := client.Post(fmt.Sprintf("https://porkbun.com/api/json/v3/dns/create/%s", cfg.Domain), "application/json", bytes.NewBuffer(req))
 	if err != nil {
 		return false, fmt.Errorf("error sending API request: %s", err)
 	}
 	defer resp.Body.Close()
 
 	// Parse API response
-	body, err := io.ReadAll(resp.Body)
+	var status statusResp
+	err = json.NewDecoder(resp.Body).Decode(&status)
 	if err != nil {
-		return false, fmt.Errorf("error reading API response: %s", err)
-	}
-
-	var data map[string]interface{}
-	err = json.Unmarshal(body, &data)
-	if err != nil {
-		return false, fmt.Errorf("error decoding API response: %s", err)
+		return false, fmt.Errorf("error decoding API response: %s (status: %d)", err, resp.StatusCode)
 	}
 
 	// Use the response
-	if data["status"].(string) != "SUCCESS" {
-		return false, fmt.Errorf("error: %s", data["message"].(string))
+	if status.Status != "SUCCESS" {
+		return false, fmt.Errorf("error %d: %s", resp.StatusCode, status.Message)
 	}
-	log.Printf("Record created successfully with ID: %d", int(data["id"].(float64)))
+	log.Printf("Record created successfully with ID: %s", status.Id)
 
 	return true, nil
 }
@@ -336,34 +355,33 @@ func main() {
 	}
 	defer file.Close()
 
-	jsonDecoder := json.NewDecoder(file)
-	config := Config{}
-	err = jsonDecoder.Decode(&config)
+	cfg := config{}
+	err = json.NewDecoder(file).Decode(&cfg)
 	if err != nil {
 		log.Fatalf("Error decoding config file: %s", err)
 	}
 
 	// Enforce minimum interval of 60 seconds
-	if config.Global.Interval < 60 {
+	if cfg.Global.Interval < 60 {
 		if *verbose {
 			log.Printf("Warning: Minimum interval is 60 seconds, setting interval to 60 seconds")
 		}
-		config.Global.Interval = 60
+		cfg.Global.Interval = 60
 	}
 
 	// Run the update loop
 	for {
 		// Update domains
-		for _, domConfig := range config.Domains {
+		for _, domConfig := range cfg.Domains {
 			// Fill in missing values from the global config
 			if domConfig.Secretapikey == "" {
-				domConfig.Secretapikey = config.Global.Secretapikey
+				domConfig.Secretapikey = cfg.Global.Secretapikey
 			}
 			if domConfig.Apikey == "" {
-				domConfig.Apikey = config.Global.Apikey
+				domConfig.Apikey = cfg.Global.Apikey
 			}
 			if domConfig.Ttl == 0 {
-				domConfig.Ttl = config.Global.Ttl
+				domConfig.Ttl = cfg.Global.Ttl
 			}
 
 			// Enforce minimum TTL of 600 seconds (as defined by porkbun)
@@ -433,8 +451,8 @@ func main() {
 
 		// Wait for the next update
 		if *verbose {
-			log.Printf("Waiting %d seconds for the next update", config.Global.Interval)
+			log.Printf("Waiting %d seconds for the next update", cfg.Global.Interval)
 		}
-		time.Sleep(time.Duration(config.Global.Interval) * time.Second)
+		time.Sleep(time.Duration(cfg.Global.Interval) * time.Second)
 	}
 }

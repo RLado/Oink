@@ -354,13 +354,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error opening config file: %s", err)
 	}
-	defer file.Close()
 
 	cfg := config{}
 	err = json.NewDecoder(file).Decode(&cfg)
 	if err != nil {
 		log.Fatalf("Error decoding config file: %s", err)
 	}
+
+	file.Close()
 
 	// Enforce minimum interval of 60 seconds
 	if cfg.Global.Interval < 60 {

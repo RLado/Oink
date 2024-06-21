@@ -2,7 +2,7 @@ BINARY_NAME:=oink
 DESTDIR:= 
  
 build:
-	@go build -o ${BINARY_NAME} src/main.go
+	@go build -ldflags "-s -w" -o ${BINARY_NAME} src/main.go
 
 clean:
 	@go clean

@@ -344,6 +344,7 @@ func createRecord(cfg domConfig, ipAddr ip) (bool, error) {
 func main() {
 	// Flags
 	configPath := flag.String("c", "/etc/oink_ddns/config.json", "Path to oink_ddns configuration file")
+	update := flag.Bool("u", false, "Update the DNS records immediately and exit")
 	verbose := flag.Bool("v", false, "Enable verbose output")
 
 	flag.Parse()
@@ -447,6 +448,11 @@ func main() {
 					}
 				}
 			}
+		}
+
+		// Exit if the update flag is set
+		if *update {
+			os.Exit(0)
 		}
 
 		// Wait for the next update

@@ -23,6 +23,15 @@ dpkg -i <oink_pkg>.deb
 pacman -U <oink_pkg>.pkg.tar.zst 
 ```
 
+#### Using the Nix package manager
+Jeremy Baxter maintains the `oink` package in nixpkgs.
+On any system with Nix, use this command to enter a temporary shell with Oink:
+```bash
+nix-shell -p oink
+```
+Alternatively on a NixOS system you can enable `services.oink`.
+Look up `services.oink` in `man configuration.nix` for more information.
+
 #### Or you can build from source and install using *make*
 > Requires *make* and *go*
 ```bash

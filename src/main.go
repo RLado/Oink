@@ -49,9 +49,9 @@ type ip struct {
 
 // Response types
 type statusResp struct {
-	Status  string `json:"status"`
-	Id      string `json:"id"`
-	Message string `json:"message"`
+	Status  string      `json:"status"`
+	Id      json.Number `json:"id"`
+	Message string      `json:"message"`
 }
 
 type pingResp struct {

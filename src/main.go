@@ -371,6 +371,15 @@ func main() {
 		cfg.Global.Interval = 60
 	}
 
+	// If environment variables for the API keys are set, override the global API keys of the config file
+	if os.Getenv("OINK_OVERRIDE_SECRETAPIKEY") != "" && os.Getenv("OINK_OVERRIDE_APIKEY") != "" {
+		if *verbose {
+			log.Printf("Overriding secretapikey and apikey with environment variables")
+		}
+		cfg.Global.Secretapikey = os.Getenv("OINK_OVERRIDE_SECRETAPIKEY")
+		cfg.Global.Apikey = os.Getenv("OINK_OVERRIDE_APIKEY")
+	}
+
 	// Run the update loop
 	for {
 		// Update domains

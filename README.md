@@ -101,3 +101,19 @@ systemctl start oink_ddns
 ```
 - You are done! Your domain DNS record should update automatically
 
+---
+### CLI options
+**Oink!** also provides a CLI interface for manual DNS updates and debugging. The CLI options are the following:
+
+> Type `oink -h` to display this help message
+```
+Usage of oink:
+  -c string
+    	Path to oink_ddns configuration file (default "/etc/oink_ddns/config.json")
+  -u	Update the DNS records immediately and exit
+  -v	Enable verbose output
+```
+
+---
+### Overriding API keys
+For certain specific use cases, you might want to override the global API keys of your configuration file using environment variables. To do so, **both** `OINK_OVERRIDE_SECRETAPIKEY` and `OINK_OVERRIDE_APIKEY` must be set. These environment variables will take precedence over the global API keys set in the configuration file.

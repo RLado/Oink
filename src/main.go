@@ -110,7 +110,7 @@ func getIp(cfg domConfig) (ip, error) {
 	}
 
 	// Send API request
-	resp, err := client.Post("https://porkbun.com/api/json/v3/ping", "application/json", bytes.NewBuffer(reqBody))
+	resp, err := client.Post("https://api.porkbun.com/api/json/v3/ping", "application/json", bytes.NewBuffer(reqBody))
 	if err != nil {
 		return ipAddr, fmt.Errorf("error sending API request: %s", err)
 	}
@@ -216,7 +216,7 @@ func updateDns(cfg domConfig, ipAddr ip) (bool, error) {
 	}
 
 	// Send API request
-	resp, err := client.Post(fmt.Sprintf("https://porkbun.com/api/json/v3/dns/retrieveByNameType/%s/%s/%s", cfg.Domain, recordType, cfg.Subdomain), "application/json", bytes.NewBuffer(reqBody))
+	resp, err := client.Post(fmt.Sprintf("https://api.porkbun.com/api/json/v3/dns/retrieveByNameType/%s/%s/%s", cfg.Domain, recordType, cfg.Subdomain), "application/json", bytes.NewBuffer(reqBody))
 	if err != nil {
 		return false, fmt.Errorf("error sending API request: %s", err)
 	}
@@ -270,7 +270,7 @@ func updateDns(cfg domConfig, ipAddr ip) (bool, error) {
 	}
 
 	// Send API request
-	resp, err = client.Post(fmt.Sprintf("https://porkbun.com/api/json/v3/dns/edit/%s/%s", cfg.Domain, recordId), "application/json", bytes.NewBuffer(reqBody))
+	resp, err = client.Post(fmt.Sprintf("https://api.porkbun.com/api/json/v3/dns/edit/%s/%s", cfg.Domain, recordId), "application/json", bytes.NewBuffer(reqBody))
 	if err != nil {
 		return false, fmt.Errorf("error sending API request: %s", err)
 	}
@@ -319,7 +319,7 @@ func createRecord(cfg domConfig, ipAddr ip) (bool, error) {
 	}
 
 	// Send API request
-	resp, err := client.Post(fmt.Sprintf("https://porkbun.com/api/json/v3/dns/create/%s", cfg.Domain), "application/json", bytes.NewBuffer(req))
+	resp, err := client.Post(fmt.Sprintf("https://api.porkbun.com/api/json/v3/dns/create/%s", cfg.Domain), "application/json", bytes.NewBuffer(req))
 	if err != nil {
 		return false, fmt.Errorf("error sending API request: %s", err)
 	}

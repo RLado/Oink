@@ -13,6 +13,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -20,6 +21,8 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/RLado/ipv6flags"
 )
 
 type config struct {
@@ -92,10 +95,45 @@ type recordReq struct {
 }
 
 // Get the current IP address
-// Requests the IP address from the porkbun API & checks if the API keys are valid
+// Requests the IP address from the Porkbun API & checks if the API keys are valid
 func getIp(cfg domConfig) (ip, error) {
 	ipAddr := ip{}
 
+	// Check if a global and non-temporary IPv6 address is available
+	addrs, err := ipv6flags.GetAddrs()
+	if err != nil {
+		switch err {
+		case errors.New("unsupported platform"):
+			log.Printf("IPv6 temporary address detection is not supported on this platform [see: https://github.com/RLado/Oink/issues/13]")
+		default:
+			return ipAddr, fmt.Errorf("error reading IPv6 addresses: %s", err)
+		}
+	}
+
+	for _, addr := range addrs {
+		if addr.Scope == "Global" {
+			if len(addr.Flags) == 0 {
+				ipAddr.Ip = addr.Address.String()
+				ipAddr.IpVer = "ipv6"
+
+				return ipAddr, nil
+			}
+			valid := true
+			for _, flag := range addr.Flags {
+				if flag == "Secondary/Temporary" || flag == "Deprecated" {
+					valid = false
+				}
+			}
+			if valid {
+				ipAddr.Ip = addr.Address.String()
+				ipAddr.IpVer = "ipv6"
+
+				return ipAddr, nil
+			}
+		}
+	}
+
+	// If no global and permanent IPv6 address is available, use the porkbun API. Assuming the address is IPv4 or IPv6 with NAT.
 	client := http.Client{
 		Timeout: 30 * time.Second,
 	}

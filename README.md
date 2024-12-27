@@ -1,5 +1,3 @@
-> ⚠️ Porkbun has changed their API hostname. Please **update** to Oink **v1.3.1** or higher before 2024-12-01 to avoid service interruption.
-
 <img src="Oink!.png" alt="Oink!" width="500"/>
 
 ## A lightweight DDNS client for [Porkbun](https://porkbun.com)

@@ -84,7 +84,7 @@ If you want to update more than one domain or subdomain, you can add new domains
             "subdomain": "<your subdomain here>",
             "ttl": 800,
             "skipIPv4": false,
-            "skipIPv6": false,
+            "skipIPv6": false
         },
         {
             "domain": "<your domain 2 here>",

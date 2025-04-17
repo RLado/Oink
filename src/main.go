@@ -40,6 +40,8 @@ type domConfig struct {
 	Domain       string `json:"domain"`
 	Subdomain    string `json:"subdomain"`
 	Ttl          int    `json:"ttl"`
+	SkipIPv4     bool   `json:"skipIPv4"`
+	SkipIPv6     bool   `json:"skipIPv6"`
 }
 
 type ip struct {
@@ -93,6 +95,7 @@ type recordReq struct {
 
 // Get the current IP address
 // Requests the IP address from the porkbun API & checks if the API keys are valid
+// Will preferentially return IPv6, but returns IPv4 as a backup
 func getIp(cfg domConfig) (ip, error) {
 	ipAddr := ip{}
 
@@ -384,6 +387,12 @@ func main() {
 	for {
 		// Update domains
 		for _, domConfig := range cfg.Domains {
+			// Skip update (Nonsense option)
+			if domConfig.SkipIPv4 && domConfig.SkipIPv6 {
+				log.Printf("Skipping record update for: %s.%s [review your config]", domConfig.Subdomain, domConfig.Domain)
+				continue
+			}
+
 			// Fill in missing values from the global config
 			if domConfig.Secretapikey == "" {
 				domConfig.Secretapikey = cfg.Global.Secretapikey
@@ -406,7 +415,14 @@ func main() {
 			// Start the update record process
 			if *verbose {
 				log.Printf("Updating record: %s.%s", domConfig.Subdomain, domConfig.Domain)
+				if domConfig.SkipIPv4 {
+					log.Printf("Skipping IPv4 update")
+				}
+				if domConfig.SkipIPv6 {
+					log.Printf("Skipping IPv6 update")
+				}
 			}
+
 			// Get current IP address
 			currentIp, err := getIp(domConfig)
 			if err != nil {
@@ -416,27 +432,13 @@ func main() {
 				log.Printf("Current IP address: %s", currentIp.Ip)
 			}
 
-			// Update DNS record
-			updated, err := updateDns(domConfig, currentIp)
-			if err != nil {
-				log.Fatalln(err)
-			}
-			if updated {
-				if currentIp.IpVer == "ipv4" {
-					log.Printf("A record for %s.%s updated successfully to: %s", domConfig.Subdomain, domConfig.Domain, currentIp.Ip)
-				} else if currentIp.IpVer == "ipv6" {
-					log.Printf("AAAA record for %s.%s updated successfully to: %s", domConfig.Subdomain, domConfig.Domain, currentIp.Ip)
-				}
-			} else if *verbose {
-				log.Printf("Record is already up to date")
-			}
-
 			// If the IP address found was IPv6 check if an IPv4 address is also available
-			if currentIp.IpVer == "ipv6" {
+			var ipv4 ip
+			if !domConfig.SkipIPv4 && currentIp.IpVer == "ipv6" {
 				if *verbose {
 					log.Printf("IPv6 address found, checking for IPv4")
 				}
-				ipv4, err := getIp4(domConfig)
+				ipv4, err = getIp4(domConfig)
 				if err != nil {
 					if *verbose {
 						log.Printf("No IPv4 address found: %s", err)
@@ -445,17 +447,35 @@ func main() {
 					if *verbose {
 						log.Printf("IPv4 address found: %s", ipv4.Ip)
 					}
+				}
+			}
 
-					// Update DNS record
-					updated, err := updateDns(domConfig, ipv4)
-					if err != nil {
-						log.Fatalln(err)
+			// Update DNS record
+			if currentIp.IpVer == "ipv6" && !domConfig.SkipIPv6 || currentIp.IpVer == "ipv4" && !domConfig.SkipIPv4 {
+				updated, err := updateDns(domConfig, currentIp)
+				if err != nil {
+					log.Fatalln(err)
+				}
+				if updated {
+					if currentIp.IpVer == "ipv4" {
+						log.Printf("A record for %s.%s updated successfully to: %s", domConfig.Subdomain, domConfig.Domain, currentIp.Ip)
+					} else if currentIp.IpVer == "ipv6" {
+						log.Printf("AAAA record for %s.%s updated successfully to: %s", domConfig.Subdomain, domConfig.Domain, currentIp.Ip)
 					}
-					if updated {
-						log.Printf("A record for %s.%s updated successfully to: %s", domConfig.Subdomain, domConfig.Domain, ipv4.Ip)
-					} else if *verbose {
-						log.Printf("Record is already up to date")
-					}
+				} else if *verbose {
+					log.Printf("Record is already up to date")
+				}
+			}
+
+			if ipv4.IpVer != "" && !domConfig.SkipIPv4 {
+				updated, err := updateDns(domConfig, ipv4)
+				if err != nil {
+					log.Fatalln(err)
+				}
+				if updated {
+					log.Printf("A record for %s.%s updated successfully to: %s", domConfig.Subdomain, domConfig.Domain, ipv4.Ip)
+				} else if *verbose {
+					log.Printf("Record is already up to date")
 				}
 			}
 		}

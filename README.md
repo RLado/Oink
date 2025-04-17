@@ -82,7 +82,9 @@ If you want to update more than one domain or subdomain, you can add new domains
             "apikey": "<override api key here>",
             "domain": "<your domain here>",
             "subdomain": "<your subdomain here>",
-            "ttl": 800
+            "ttl": 800,
+            "skipIPv4": false,
+            "skipIPv6": false,
         },
         {
             "domain": "<your domain 2 here>",
@@ -91,7 +93,7 @@ If you want to update more than one domain or subdomain, you can add new domains
     ]
 }
 ```
-> *Entries must at least contain the `domain` and `subdomain` fields.*
+> *Domain entries must at least contain the `domain` and `subdomain` fields.*
 
 - Enable and start the service using `systemd`
 > ⚠️ *Make sure to **enable** API ACCESS in your porkbun domain's control panel*
